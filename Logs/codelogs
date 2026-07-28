@@ -1,0 +1,132 @@
+// 	type Person struct {
+// 		name string
+// 		age int
+// 		email string
+// }
+// fmt.Println("Hello, Giridhar!!")
+	// var age int = 28
+
+	// if age >= 18 {
+	// 	fmt.Println("Adult")
+	// } else if age >= 13 {
+	// 	fmt.Println("Teen")
+	// } else {
+	// 	fmt.Println("Child")
+	// }
+
+	// switch {
+	// case age >= 25:
+	// 	fmt.Println("Damn son!!")
+	// case age <25:
+	// 	fmt.Println("Silence boy!!")
+	// default:
+	// 	fmt.Println("wohooo yeah!!")
+	// }
+
+	// for i := 0; i < 4; i++ {
+	// 	fmt.Println(i)
+	// }
+	// for range 3 {
+	// 	fmt.Println("Yeahhh")
+	// }
+	// j := 0
+	// for j < 2 {
+	// 	fmt.Println("while loooooop")
+	// 	j++
+	// }
+	// nums := []int{10,20,30}
+
+	// for index, value := range nums {
+	// 	if value == 30 {
+	// 		fmt.Println(index)
+	// 	}
+	// }
+
+	// fmt.Println(add(5,3))
+	// mySlice := []int{1,2,3,4,5}
+	// fmt.Println(minMax(mySlice))
+
+	// s1 := []int{1,2,3,4,5}
+	// s2 := make([]int, 5)
+	// copy(s2, s1)
+	// // for i,n := range s1 {
+	// // 	s2[i] = n
+	// // }
+	// fmt.Println(s2)
+	// matrix := [][]int{
+	// 	{1,2,3},
+	// 	{2,3,4},
+	// 	{3,4,5},
+	// }
+	// fmt.Println(matrix[2][2])
+
+	// m1 := map[string]int{
+	// 	"alice": 1,
+	// 	"bob": 2,
+	// }
+
+	// for key, value := range m1 {
+	// 	fmt.Println(key, value)
+	// }
+
+	// s3 := []int{-20}
+
+	// fmt.Println(twoLargest(s3))
+
+// 	p1 := Person{Name: "Giridhar", Age: 25}
+// 	fmt.Println(p1.Name)
+
+// 	p, err := NewPerson("Giridhar", 25)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	fmt.Println(p.Name)
+
+// 	p1.celebrateBirthday()
+// 	fmt.Println(p1.Age)
+// }
+
+
+// func add (a int, b int) int{
+// 	return a + b
+// }
+
+// func minMax (nums []int) (min, max int) {
+// 	min, max = nums[0], nums[0]
+// 	for _, num := range nums {
+// 		if num > max {max = num}
+// 		if num < min {min = num}
+// 	}
+// 	return 
+// }
+
+// func twoLargest (nums []int) (fir, sec int, err error){
+// 	if len(nums) < 2 {
+// 		return 0,0,fmt.Errorf("need atleast 2 elements, got %d", len(nums))
+// 	}
+// 	fir = nums[0]
+// 	sec = nums[0]
+// 	for _, n := range nums {
+// 		if n > fir {
+// 			sec = fir
+// 			fir = n
+// 		} else if n > sec {
+// 			sec = n
+// 		}
+// 	}
+// 	return
+// }
+
+// func NewPerson (name string, age int) (*Person, error){
+// 	if name == ""{
+// 		return nil, fmt.Errorf("name cannot be empty")
+// 	}
+// 	if age < 0 {
+// 		return nil, fmt.Errorf("Age should be positive")
+// 	}
+// 	return &Person{Name: name, Age: age}, nil
+// }
+
+// func (p *Person) celebrateBirthday(){
+// 	p.Age++
+// }
