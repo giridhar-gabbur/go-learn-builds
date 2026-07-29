@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
+	"log"
 )
 
 type BankAccount struct {
@@ -186,12 +188,42 @@ func txWorker (id int, transactions <- chan Transaction, results chan <- TxResul
 	}
 }
 
+func monitorAccount(b *BankAccount, alerts chan<- string, done <-chan bool) {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()  
+	for {
+		select {
+		case <- done:
+			fmt.Println("Monitor stopped!")
+			close(alerts)
+			return
+		case <- ticker.C:
+			if b.CurrBalance() < 1000 {
+				alerts <- "Low Balance!"
+			}
+		}
+	}
+}
+
 func main() {
-	b,_ := NewBankAccount("Giridhar", 10000)
+	b, err := NewBankAccount("Giridhar", 1000)
+	if err != nil {
+		log.Fatal("Account creation failed:", err)
+	}
 	var wg sync.WaitGroup
+	var wgMonitor sync.WaitGroup
 
 	transactions := make(chan Transaction, 20)
 	results:= make(chan TxResult, 20)
+
+	alerts := make(chan string, 20)
+	done := make(chan bool)
+
+	wgMonitor.Add(1)
+	go func() {
+		defer wgMonitor.Done()
+		monitorAccount(b, alerts, done)
+	}()
 
 	for w := 1; w < 3; w++ {
 		wg.Add(1)
@@ -199,12 +231,12 @@ func main() {
 	}
 
 	txs := []Transaction{
-		{ID: "1A", Type: "Deposit", Amount: 130005677.23},
+		{ID: "1A", Type: "Deposit", Amount: 1300},
 		{ID: "1B", Type: "Withdrawal", Amount: 1300},
-		{ID: "1C", Type: "Deposit", Amount: 530004500.53},
+		{ID: "1C", Type: "Deposit", Amount: 53},
 		{ID: "1D", Type: "Withdrawal", Amount: 100.23},
-		{ID: "1E", Type: "Deposit", Amount: 130099056.23},
-		{ID: "1F", Type: "Deposit", Amount: 130054260.23},
+		{ID: "1E", Type: "Deposit", Amount: 13},
+		{ID: "1F", Type: "Deposit", Amount: 130},
 	}
 
 	for _,tx := range txs {
@@ -217,78 +249,24 @@ func main() {
 		close(results)
 	}()
 
+	successes, failures := 0,0
 	for res := range results {
 		if res.Success {
 			fmt.Printf("Transation %s: Approved\n", res.TxID)
+			successes++
 		} else {
-			fmt. Printf("Transaction %s: Declined -> %v\n", res.TxID, res.Err)
+			fmt.Printf("Transaction %s: Declined -> %v\n", res.TxID, res.Err)
+			failures++
 		}
 	}
-
+	fmt.Printf("\n=== Summary ===\n")
+    fmt.Printf("✅ Succeeded: %d\n", successes)
+    fmt.Printf("❌ Failed:    %d\n", failures)
 	fmt.Printf("\nFinal Audited Account Balance: $%.2f\n", b.CurrBalance())
 
-	// defer fmt.Println("\n--- Transaction session complete ---")
-    // giridhar, err := NewBankAccount("Giridhar", 10000)
-    // if err != nil {
-    //     log.Fatal(err)
-    // }
-
-    // // alice, err := NewBankAccount("Alice", 5000)
-    // // if err != nil {
-    // //     log.Fatal(err)
-    // // }
-
-	// // bob, err := NewBankAccount("Bob", 56098000)
-    // // if err != nil {
-    // //     log.Fatal(err)
-    // // }
-
-	// // accounts := []*BankAccount{giridhar, alice, bob}
-	// // acc := FindAccount("Bob", accounts)
-	// // if acc != nil {
-	// // 	err := TransferBetween(bob, giridhar, 4530000)
-	// // 	if err != nil {
-	// // 		log.Fatal(err)
-	// // 	}
-	// // }
-
-
-    
-	// // var trErr TransactionError
-	// // if err1 := giridhar.DepositAmount(-2000); errors.As(err1, &trErr){
-	// // 	fmt.Printf("Transaction Type: %s\n",trErr.Type)
-	// // 	fmt.Printf("Amount: %.2f\n",trErr.Amount)
-	// // 	fmt.Printf("Error: %v\n",trErr.Reason)
-	// // }
-
-	// // if err2 := giridhar.Withdraw(59955500); errors.Is(err2, ErrInsufficientFunds){
-	// // 	fmt.Println("Please make sure you have sufficient funds in the system")
-	// // }
-    // // giridhar.Transfer(3000, alice)
-
-    // fmt.Println(giridhar)
-    // // fmt.Println(alice)
-
-    // // giridhar.PrintHistory()
-    // // alice.PrintHistory()
-	// // bob.PrintHistory()
-
-	// var wg sync.WaitGroup
-	// deposits := make([]float64, 50)
-	// for i := range deposits {
-	// 	deposits[i] = 100
-	// }
-
-
-	// withdrawals := make([]float64, 30)
-	// for i := range withdrawals {
-	// 	withdrawals[i] = -50
-	// }
-
-	// ProcessTransactions(giridhar, deposits, &wg)
-	// ProcessTransactions(giridhar, withdrawals, &wg)
-	// wg.Wait()
-	// fmt.Println("Transactions processed succesfully")
-	// fmt.Println(giridhar)
-
+	done <- true
+	wgMonitor.Wait()
+	for alert := range alerts {
+		fmt.Println(alert)
+	}
 }
