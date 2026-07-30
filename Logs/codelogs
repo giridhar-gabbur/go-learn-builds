@@ -130,3 +130,68 @@
 // func (p *Person) celebrateBirthday(){
 // 	p.Age++
 // }
+
+//BankAccount 
+	// defer fmt.Println("\n--- Transaction session complete ---")
+    // giridhar, err := NewBankAccount("Giridhar", 10000)
+    // if err != nil {
+    //     log.Fatal(err)
+    // }
+
+    // // alice, err := NewBankAccount("Alice", 5000)
+    // // if err != nil {
+    // //     log.Fatal(err)
+    // // }
+
+	// // bob, err := NewBankAccount("Bob", 56098000)
+    // // if err != nil {
+    // //     log.Fatal(err)
+    // // }
+
+	// // accounts := []*BankAccount{giridhar, alice, bob}
+	// // acc := FindAccount("Bob", accounts)
+	// // if acc != nil {
+	// // 	err := TransferBetween(bob, giridhar, 4530000)
+	// // 	if err != nil {
+	// // 		log.Fatal(err)
+	// // 	}
+	// // }
+
+
+    
+	// // var trErr TransactionError
+	// // if err1 := giridhar.DepositAmount(-2000); errors.As(err1, &trErr){
+	// // 	fmt.Printf("Transaction Type: %s\n",trErr.Type)
+	// // 	fmt.Printf("Amount: %.2f\n",trErr.Amount)
+	// // 	fmt.Printf("Error: %v\n",trErr.Reason)
+	// // }
+
+	// // if err2 := giridhar.Withdraw(59955500); errors.Is(err2, ErrInsufficientFunds){
+	// // 	fmt.Println("Please make sure you have sufficient funds in the system")
+	// // }
+    // // giridhar.Transfer(3000, alice)
+
+    // fmt.Println(giridhar)
+    // // fmt.Println(alice)
+
+    // // giridhar.PrintHistory()
+    // // alice.PrintHistory()
+	// // bob.PrintHistory()
+
+	// var wg sync.WaitGroup
+	// deposits := make([]float64, 50)
+	// for i := range deposits {
+	// 	deposits[i] = 100
+	// }
+
+
+	// withdrawals := make([]float64, 30)
+	// for i := range withdrawals {
+	// 	withdrawals[i] = -50
+	// }
+
+	// ProcessTransactions(giridhar, deposits, &wg)
+	// ProcessTransactions(giridhar, withdrawals, &wg)
+	// wg.Wait()
+	// fmt.Println("Transactions processed succesfully")
+	// fmt.Println(giridhar)
