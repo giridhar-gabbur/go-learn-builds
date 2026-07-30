@@ -1,11 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"time"
-	"log"
 )
 
 type BankAccount struct {
@@ -16,6 +17,8 @@ type BankAccount struct {
 	mu sync.RWMutex
 }
 
+type contextKey string
+const ReqIDKey contextKey = "requestID"
 
 var (
 	ErrInsufficientFunds = errors.New("Insufficient Funds in account")
@@ -169,22 +172,57 @@ type TxResult struct {
 	Err error
 }
 
-func txWorker (id int, transactions <- chan Transaction, results chan <- TxResult, b *BankAccount, wg *sync.WaitGroup){
+func txWorker (ctx context.Context, id int, transactions <- chan Transaction, results chan <- TxResult, b *BankAccount, wg *sync.WaitGroup){
 	defer wg.Done()
+
+	reqID, ok := ctx.Value(ReqIDKey).(string)
+	if !ok {
+		reqID = "UNKNOWN"
+	}
+
 	for tx := range transactions {
-		fmt.Printf("[Worker %d] processing the transaction: %s of type %s of %.2f\n", id, tx.ID, tx.Type, tx.Amount)
-		var err error
-		if tx.Type == "Deposit"{
-			err = b.DepositAmount(tx.Amount)
-		} else if tx.Type == "Withdrawal"{
-			err = b.Withdraw(tx.Amount)
+		select {
+		case <- ctx.Done():
+			results <- TxResult{
+				TxID: tx.ID,
+				Success: false,
+				Err: ctx.Err(),
+			}
+			continue
+		default:
 		}
+		fmt.Printf("[Worker %d][%s] processing the transaction: %s of type %s of %.2f\n", id, reqID, tx.ID, tx.Type, tx.Amount)
+		err := processTransaction(ctx, b, tx)
 
 		results <- TxResult{
 			TxID: tx.ID,
 			Success: err == nil,
 			Err: err,
 		}
+	}
+}
+
+func processTransaction (ctx context.Context, b *BankAccount, tx Transaction) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	subCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		var err error
+		if tx.Type == "Deposit" {
+			err = b.DepositAmount(tx.Amount)
+		} else if tx.Type == "Withdrawal" {
+			err = b.Withdraw(tx.Amount)
+		}
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		return err
+	case <- subCtx.Done():
+		return subCtx.Err()
 	}
 }
 
@@ -205,38 +243,30 @@ func monitorAccount(b *BankAccount, alerts chan<- string, done <-chan bool) {
 	}
 }
 
-func main() {
-	b, err := NewBankAccount("Giridhar", 1000)
-	if err != nil {
-		log.Fatal("Account creation failed:", err)
-	}
+func processRequest (b *BankAccount, requestID string, txs []Transaction){
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	ctx = context.WithValue(ctx, ReqIDKey, requestID)
+
 	var wg sync.WaitGroup
-	var wgMonitor sync.WaitGroup
+	// var wgMonitor sync.WaitGroup
 
 	transactions := make(chan Transaction, 20)
 	results:= make(chan TxResult, 20)
 
-	alerts := make(chan string, 20)
-	done := make(chan bool)
+	// alerts := make(chan string, 20)
+	// done := make(chan bool)
 
-	wgMonitor.Add(1)
-	go func() {
-		defer wgMonitor.Done()
-		monitorAccount(b, alerts, done)
-	}()
+	// wgMonitor.Add(1)
+	// go func() {
+	// 	defer wgMonitor.Done()
+	// 	monitorAccount(b, alerts, done)
+	// }()
 
-	for w := 1; w < 3; w++ {
+	for w := 1; w < 5; w++ {
 		wg.Add(1)
-		go txWorker(w, transactions, results, b, &wg)
-	}
-
-	txs := []Transaction{
-		{ID: "1A", Type: "Deposit", Amount: 1300},
-		{ID: "1B", Type: "Withdrawal", Amount: 1300},
-		{ID: "1C", Type: "Deposit", Amount: 53},
-		{ID: "1D", Type: "Withdrawal", Amount: 100.23},
-		{ID: "1E", Type: "Deposit", Amount: 13},
-		{ID: "1F", Type: "Deposit", Amount: 130},
+		go txWorker(ctx, w, transactions, results, b, &wg)
 	}
 
 	for _,tx := range txs {
@@ -252,10 +282,10 @@ func main() {
 	successes, failures := 0,0
 	for res := range results {
 		if res.Success {
-			fmt.Printf("Transation %s: Approved\n", res.TxID)
+			fmt.Printf("[%s] Transation %s: Approved\n", requestID, res.TxID)
 			successes++
 		} else {
-			fmt.Printf("Transaction %s: Declined -> %v\n", res.TxID, res.Err)
+			fmt.Printf("[%s] Transaction %s: Declined -> %v\n", requestID, res.TxID, res.Err)
 			failures++
 		}
 	}
@@ -263,10 +293,32 @@ func main() {
     fmt.Printf("✅ Succeeded: %d\n", successes)
     fmt.Printf("❌ Failed:    %d\n", failures)
 	fmt.Printf("\nFinal Audited Account Balance: $%.2f\n", b.CurrBalance())
+}
 
-	done <- true
-	wgMonitor.Wait()
-	for alert := range alerts {
-		fmt.Println(alert)
+func main() {
+	b, err := NewBankAccount("Giridhar", 1000)
+	if err != nil {
+		log.Fatal("Account creation failed:", err)
 	}
+	fmt.Println("====== Processing REQ-001 ======")
+	processRequest(b, "REQ-001", []Transaction{
+		{ID: "1A", Type: "Deposit",    Amount: 1300},
+        {ID: "1B", Type: "Withdrawal", Amount: 1300},
+        {ID: "1C", Type: "Deposit",    Amount: 53},
+	})
+
+	fmt.Println("====== Processing REQ-002 ======")
+	processRequest(b, "REQ-002", []Transaction{
+		{ID: "2A", Type: "Deposit",    Amount: 500},
+        {ID: "2B", Type: "Withdrawal", Amount: 200},
+        {ID: "2C", Type: "Deposit",    Amount: 100},
+	})
+	
+	 fmt.Printf("\nFinal Balance: $%.2f\n", b.CurrBalance())
+
+	// done <- true
+	// wgMonitor.Wait()
+	// for alert := range alerts {
+	// 	fmt.Println(alert)
+	// }
 }
